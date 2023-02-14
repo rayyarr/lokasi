@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Distance Calculator Between two Location</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:ital,wght@0,400;0,700;1,400;1,700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/5.0.0-alpha2/css/bootstrap.min.css"
+      integrity="sha384-DhY6onE6f3zzKbjUPRc2hOzGAdEf4/Dz+WJwBvEYL/lkkIsI3ihufq9hk9K4lVoK"
+      crossorigin="anonymous"
+    />
+    <style>
+      * {
+        font-family: "Roboto Condensed", sans-serif;
+      }
+    </style>
+
+    <script
+      defer
+      src="https://stackpath.bootstrapcdn.com/bootstrap/5.0.0-alpha2/js/bootstrap.bundle.min.js"
+      integrity="sha384-BOsAfwzjNJHrJ8cZidOg56tcQWfp6y72vEJ8xQ9w6Quywb24iOsW913URv1IS4GD"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      defer
+      src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/2.1.2/sweetalert.min.js"
+      integrity="sha512-AA1Bzp5Q0K1KanKKmvN/4d3IRKVlv9PYgwFPvm32nPO6QS8yH1HO7LbgB1pgiOxPtfeg5zEn2ba64MUcqJx6CA=="
+      crossorigin="anonymous"
+    ></script>
+  </head>
+  <body>
+    <div class="container" style="height: 100vh">
+      <div
+        class="mx-auto text-center"
+        style="margin-top: 100px; max-width: 540px"
+      >
+        <div class="alert alert-info" role="alert">
+          Sistem ini menggunakan akses lokasi agar dapat bekerja, <br />
+          <strong>harap izinkan lokasi anda.</strong>
+        </div>
+        <div class="mb-3">
+          <span class="d-block"
+            >Lokasi Saya: <b id="my-location">belum terdeteksi</b></span
+          >
+        </div>
+        <div class="mb-3">
+          <span class="d-block"
+            >Latitude: <b id="your-latitude">belum terdeteksi</b></span
+          ><span class="d-block"
+            >Longitude: <b id="your-longitude">belum terdeteksi</b></span
+          >
+          <span class="d-block">
+            Lokasi Anda: <b id="your-location">belum terdeteksi</b></span
+          >
+        </div>
+        <div class="mb-3">
+          <div class="d-block">
+            <span>Jarak kita: <b id="our-distance">belum terdeteksi</b></span>
+          </div>
+        </div>
+        <button
+          id="allow-location-button"
+          type="button"
+          class="btn btn-primary d-none"
+        >
+          Izinkan akses lokasi saya
+        </button>
+      </div>
+    </div>
+
+    <script>
+      window.addEventListener("load", () => {
+        const allowLocationButton = document.querySelector(
+          "#allow-location-button"
+        );
+        const myLocation = document.querySelector("#my-location");
+        const ourDistance = document.querySelector("#our-distance");
+        const yourLatitude = document.querySelector("#your-latitude");
+        const yourLongitude = document.querySelector("#your-longitude");
+        const yourLocation = document.querySelector("#your-location");
+
+        const myLat = "0.47185319";
+        const myLon = "101.40180206";
+
+        function isSupportLocation() {
+          if (navigator.geolocation) {
+            allowLocationButton.classList.remove("d-none");
+
+            allowLocationButton.addEventListener("click", function () {
+              navigator.geolocation.getCurrentPosition(showPosition, (err) => {
+                switch (err.code) {
+                  case 1:
+                    swal({
+                      title: "Gagal",
+                      text: "Anda tidak mengizinkan lokasi.",
+                      icon: "error",
+                    });
+                    allowLocationButton.setAttribute("disabled", true);
+                    break;
+                  default:
+                    break;
+                }
+              });
+            });
+          } else {
+            swal({
+              title: "Gagal",
+              text: "browser ini tidak mendukung akses lokasi.",
+              icon: "error",
+            });
+          }
+        }
+
+        function showPosition(position) {
+          const latitude = position.coords.latitude;
+          const longitude = position.coords.longitude;
+
+          const apiUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=id`;
+
+          fetch(apiUrl, { headers: { "Content-Type": "application/json" } })
+            .then((res) => res.json())
+            .then((res) => {
+              //   console.log(res);
+              const city = res.city === "" ? "" : res.city + ", ";
+              const provinsi = res.locality === "" ? "" : res.locality + ", ";
+              const negara =
+                res.countryName === "" ? "" : "Negara " + res.countryName;
+
+              yourLatitude.innerText = res.latitude;
+              yourLongitude.innerText = res.longitude;
+              yourLocation.innerText = `${city}${provinsi}${negara}`;
+
+              const userLat = res.latitude;
+              const userLon = res.longitude;
+
+              calculateDistance(userLat, userLon);
+            });
+        }
+
+        function calculateDistance(userLat, userLon) {
+          const apiUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${myLat}&longitude=${myLon}&localityLanguage=id`;
+
+          fetch(apiUrl, { headers: { "Content-Type": "application/json" } })
+            .then((res) => res.json())
+            .then((res) => {
+              myLocation.innerText = `${res.locality}, ${res.countryName}`;
+            });
+
+          const R = 6371e3; // metres
+          const φ1 = (userLat * Math.PI) / 180; // φ, λ in radians
+          const φ2 = (myLat * Math.PI) / 180;
+          const Δφ = ((myLat - userLat) * Math.PI) / 180;
+          const Δλ = ((myLon - userLon) * Math.PI) / 180;
+
+          const a =
+            Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+            Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+          const d = R * c; // in metres
+          const distance = d.toFixed(0);
+
+          const distanceInKm = distance / 1000;
+
+          console.log(Intl.NumberFormat().format(distanceInKm) + " kilometer");
+
+          ourDistance.innerText =
+            Intl.NumberFormat().format(distanceInKm) + " kilometer";
+        }
+
+        isSupportLocation();
+      });
+    </script>
+  </body>
+</html>
